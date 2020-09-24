@@ -1,0 +1,213 @@
+#include "itkimage.h"
+#include "itkidentitytransform.h"
+#include "itkimagefilewriter.h"
+#include "itkresampleimagefilter.h"
+ #include "itkimageregistrationmethod.h"
+//#include "itkmeansquaresimagetoimagemetric.h"
+#include "itkmattesmutualinformationimagetoimagemetric.h"
+#include "itkversorrigid3dtransform.h"
+#include "itkcenteredtransforminitializer.h"
+#include "itkversorrigid3dtransformoptimizer.h"
+#include "itkimagefilereader.h"
+#include "itkimagefilewriter.h"
+#include "itkresampleimagefilter.h"
+#include "itkcastimagefilter.h"
+#include "itksubtractimagefilter.h"
+#include "itkrescaleintensityimagefilter.h"
+#include "itkextractimagefilter.h"
+#include "itktranslationtransform.h"
+#include "itkcommand.h"
+#include <fstream>
+#include <iostream>  
+ 
+typedef itk::image<signed short, 3> imagetype;
+ 
+int main( int argc, char *argv[])
+{
+
+	if( argc <4)
+	{
+		std::cerr << "argc <3" << std::endl;
+		std::cerr << "usage: " << std::endl;        
+		std::cerr << "to do the resample before registration. " << std::endl;
+		//std::cerr << "resample volume to spacing: 1x1x1 mm. " << std::endl;
+		std::cerr << "argv[1]= location of reference volume" << std::endl;
+		std::cerr << "argv[2]= location of moving volume" << std::endl; 	
+		std::cerr << "argv[3]= location of resampled volume" << std::endl; 		
+		return exit_failure;
+	}
+
+
+  const unsigned int                          dimension = 3;
+  typedef  signed short                              pixeltype;
+  typedef itk::image< pixeltype, dimension >  fixedimagetype;
+  typedef itk::image< pixeltype, dimension >  movingimagetype;
+ 
+  // software guide : endcodesnippet
+  typedef itk::imagefilereader< fixedimagetype  > fixedimagereadertype;
+  typedef itk::imagefilereader< movingimagetype > movingimagereadertype;
+  fixedimagereadertype::pointer  fixedimagereader  = fixedimagereadertype::new();
+  movingimagereadertype::pointer movingimagereader = movingimagereadertype::new();
+  fixedimagereader->setfilename(  argv[1] );
+  movingimagereader->setfilename( argv[2] );  
+  fixedimagereader->update();
+  movingimagereader->update();
+  fixedimagetype::constpointer fixedimage = fixedimagereader->getoutput();
+  movingimagetype::constpointer movingimage = movingimagereader->getoutput();
+ 
+  // resize
+  imagetype::sizetype outputsize,movingsize;
+  outputsize=fixedimage->getlargestpossibleregion().getsize();
+  movingsize=movingimage->getlargestpossibleregion().getsize();
+
+  //imagetype::spacingtype outputspacing;
+ // outputspacing=fixedimage->getspacing();
+
+  //outputspacing[0] = movingimage->getspacing()[0] * (static_cast<double>(movingsize[0]) / static_cast<double>(outputsize[0]));
+ // outputspacing[1] = movingimage->getspacing()[1] * (static_cast<double>(movingsize[1]) / static_cast<double>(outputsize[1]));
+  //outputspacing[2] = movingimage->getspacing()[2] * (static_cast<double>(movingsize[2]) / static_cast<double>(outputsize[2]));
+ 
+  //outputsize[0] = movingimage->getspacing()[0] * (static_cast<double>(movingsize[0]) / static_cast<double>(outputspacing[0]));
+  //outputsize[1] = movingimage->getspacing()[1] * (static_cast<double>(movingsize[1]) / static_cast<double>(outputspacing[1]));
+  //outputsize[2] = movingimage->getspacing()[2] * (static_cast<double>(movingsize[2]) / static_cast<double>(outputspacing[2]));
+
+  typedef itk::identitytransform<double, 3> transformtype;
+  typedef itk::resampleimagefilter<imagetype, imagetype> resampleimagefiltertype;
+  resampleimagefiltertype::pointer resample = resampleimagefiltertype::new();
+  resample->setinput(movingimage);
+  resample->setsize(outputsize);
+  resample->setoutputorigin(  fixedimage->getorigin() ); // fixedimage
+  resample->setoutputdirection( fixedimage->getdirection() ); //
+  resample->setoutputspacing(fixedimage->getspacing());
+  resample->settransform(transformtype::new());
+  resample->updatelargestpossibleregion();
+ 
+  imagetype::pointer output = resample->getoutput();
+  resample->update();
+ 
+  std::cout << "output size: " << output->getlargestpossibleregion().getsize() << std::endl;
+ 
+  std::cout << "writing output... " << std::endl;
+
+  typedef itk::imagefilewriter< fixedimagetype >  writertype;
+  writertype::pointer outputwriter = writertype::new();
+  outputwriter->setfilename(argv[3]);
+  outputwriter->setinput(resample->getoutput());
+  outputwriter->update();
+ 
+  return exit_success;
+}
+ 
+//#include "itkimageregistrationmethod.h"
+////#include "itkmeansquaresimagetoimagemetric.h"
+//#include "itkmattesmutualinformationimagetoimagemetric.h"
+//#include "itkversorrigid3dtransform.h"
+//#include "itkcenteredtransforminitializer.h"
+//#include "itkversorrigid3dtransformoptimizer.h"
+//#include "itkimagefilereader.h"
+//#include "itkimagefilewriter.h"
+//#include "itkresampleimagefilter.h"
+//#include "itkcastimagefilter.h"
+//#include "itksubtractimagefilter.h"
+//#include "itkrescaleintensityimagefilter.h"
+//#include "itkextractimagefilter.h"
+//#include "itktranslationtransform.h"
+//#include "itkcommand.h"
+//#include <fstream>
+//#include <iostream>  
+//
+//using namespace std;
+//
+//class commanditerationupdate : public itk::command
+//{
+//public:
+//  typedef  commanditerationupdate   self;
+//  typedef  itk::command             superclass;
+//  typedef itk::smartpointer<self>   pointer;
+//  itknewmacro( self );
+//protected:
+//  commanditerationupdate() {};
+//public:
+//  typedef itk::versorrigid3dtransformoptimizer optimizertype;
+//  typedef   const optimizertype *              optimizerpointer;
+//  void execute(itk::object *caller, const itk::eventobject & event)
+//    {
+//    execute( (const itk::object *)caller, event);
+//    }
+//  void execute(const itk::object * object, const itk::eventobject & event)
+//    {
+//    optimizerpointer optimizer =
+//      dynamic_cast< optimizerpointer >( object );
+//    if( ! itk::iterationevent().checkevent( &event ) )
+//      {
+//      return;
+//      }
+//    std::cout << optimizer->getcurrentiteration() << "   ";
+//    std::cout << optimizer->getvalue() << "   ";
+//    std::cout << optimizer->getcurrentposition() << std::endl;
+//    }
+//};
+//
+//int main( int argc, char *argv[] )
+//{
+//  if( argc <4 )
+//    {
+//    std::cerr << "missing parameters " << std::endl;
+//    std::cerr << "usage: " << argv[0];
+//    std::cerr << " fixedimagefile  movingimagefile ";
+//    std::cerr << " outputimagefile";
+//
+//    return exit_failure;
+//    }
+//  const unsigned int                          dimension = 3;
+//  typedef  unsigned short                              pixeltype;
+//  typedef itk::image< pixeltype, dimension >  fixedimagetype;
+//  typedef itk::image< pixeltype, dimension >  movingimagetype;
+// 
+//  // software guide : endcodesnippet
+//  typedef itk::imagefilereader< fixedimagetype  > fixedimagereadertype;
+//  typedef itk::imagefilereader< movingimagetype > movingimagereadertype;
+//  fixedimagereadertype::pointer  fixedimagereader  = fixedimagereadertype::new();
+//  movingimagereadertype::pointer movingimagereader = movingimagereadertype::new();
+//  fixedimagereader->setfilename(  argv[1] );
+//  movingimagereader->setfilename( argv[2] );  
+//  fixedimagereader->update();
+//  movingimagereader->update();
+//  fixedimagetype::constpointer fixedimage = fixedimagereader->getoutput();
+//  movingimagetype::constpointer movingimage = movingimagereader->getoutput();
+//
+//  
+//  // resample moving image to fixed image
+//    typedef itk::resampleimagefilter< 
+//                            movingimagetype, 
+//                            fixedimagetype >    resamplefiltertype;
+//  resamplefiltertype::pointer resample = resamplefiltertype::new();
+//  resample->setinput(movingimage);
+//  resample->setsize(fixedimage->getlargestpossibleregion().getsize() );
+//  resample->setoutputorigin(  fixedimage->getorigin() );
+//  resample->setoutputspacing( fixedimage->getspacing() );
+//  resample->setoutputdirection( fixedimage->getdirection() );
+//  resample->setdefaultpixelvalue( 0 ); 
+//  resample->update();  
+//  fixedimagetype::pointer resamplefixedimage = resample->getoutput();
+//  
+//  // write resampled images
+//  typedef itk::imagefilewriter< fixedimagetype >  writertype;
+//  writertype::pointer   writer =  writertype::new();
+//  writer->setfilename( argv[3] );
+//  writer->setinput(resamplefixedimage);
+//    try
+//    {
+//    writer->update();
+//    }
+//  catch( itk::exceptionobject & err ) 
+//    { 
+//    std::cerr << "exceptionobject caught !" << std::endl; 
+//    std::cerr << err << std::endl; 
+//	system("pause");
+//    return exit_failure;
+//    }
+//
+//   system("pause");
+//  return exit_success;
+//}
